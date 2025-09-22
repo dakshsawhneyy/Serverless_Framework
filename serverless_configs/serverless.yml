@@ -1,0 +1,10 @@
+service: invincible-lambda
+# Corrected: This means any version from 3.0 up to (but not including) 4.0
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+
+functions:
+  hello:
+    handler: handler.hellio
