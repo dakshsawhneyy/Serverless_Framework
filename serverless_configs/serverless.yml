@@ -4,7 +4,60 @@ provider:
   name: aws
   runtime: nodejs18.x
   region: ap-south-1
+  timeout: 10
+  
 
 functions:
-  hello:
-    handler: handler.hellio
+  service-A:
+    handler: handler.serviceA
+    name: serviceA-lambda
+    description: this lambda function belongs to service A of my microservices app
+    events:   # This blocks create an api gateway endpoint to trigger the function
+      - httpApi:
+          path: /service-a
+          method: get
+    # provide permissions to role of lambda function of service A
+    iamRoleStatements:
+      - Effect: Allow
+        Action:   # invode lambda function of service-B
+          - lambda:InvokeFunction
+        # This is the magic! We use a CloudFormation intrinsic function to get the REAL Arn of serviceB after it's created.
+        Resource: !GetAtt ServiceDashBLambdaFunction.Arn    # The Logical ID for the 'service-B' function is 'ServiceDashBLambdaFunction'
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+        Resource: !GetAtt Serverlessframeworktable.Arn   # The Logical ID for the 'serverless-framework-table' function is 'Serverlessframeworktable'
+
+  service-B:
+    handler: handler.serviceB
+    name: serviceB-lambda
+    description: this lambda function belongs to service B of my microservices app
+    events:   # This blocks create an api gateway endpoint to trigger the function
+      - httpApi:
+          path: /service-b
+          method: get
+    # These permissions apply ONLY to serviceB
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+          - dynamodb:PutItem
+        # This gets the REAL Arn of the table we define below
+        Resource: !GetAtt Serverlessframeworktable.Arn
+
+
+# Creating DynamoDB Table
+resources:
+  Resources:
+    serverless-framework-table:
+      Type: AWS::DynamoDB::Table
+      Properties:
+          TableName: serverless-framework-table
+          AttributeDefinitions:   # Define Columns
+            - AttributeName: id
+              AttributeType: S
+          KeySchema:   # Define value in those columns
+            - AttributeName: id
+              KeyType: HASH
+          BillingMode: PAY_PER_REQUEST
