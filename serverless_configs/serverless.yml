@@ -21,7 +21,7 @@ functions:
         Action:   # invode lambda function of service-B
           - lambda:InvokeFunction
         # This is the magic! We use a CloudFormation intrinsic function to get the REAL Arn of serviceB after it's created.
-        Resource: !GetAtt ServiceBLambdaFunction.Arn    # The Logical ID for the 'serviceB' function is 'ServiceBLambdaFunction'
+        Resource: !GetAtt ServiceDashBLambdaFunction.Arn    # The Logical ID for the 'service-B' function is 'ServiceDashBLambdaFunction'
       - Effect: Allow
         Action:
           - dynamodb:GetItem
@@ -42,7 +42,7 @@ functions:
           - dynamodb:GetItem
           - dynamodb:PutItem
         # This gets the REAL Arn of the table we define below
-        Resource: !GetAtt ServiceBLambdaFunction.Arn
+        Resource: !GetAtt ServerlessFrameworkTable.Arn
 
 
 # Creating DynamoDB Table

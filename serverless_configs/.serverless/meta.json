@@ -9,161 +9,101 @@
         "name": "aws",
         "runtime": "nodejs18.x",
         "region": "ap-south-1",
+        "timeout": 10,
         "stage": "dev",
-        "versionFunctions": true,
-        "compiledCloudFormationTemplate": {
-          "AWSTemplateFormatVersion": "2010-09-09",
-          "Description": "The AWS CloudFormation template for this Serverless application",
-          "Resources": {
-            "HelloLogGroup": {
-              "Type": "AWS::Logs::LogGroup",
-              "Properties": {
-                "LogGroupName": "/aws/lambda/serverless-framework-dev-hello"
-              }
-            },
-            "IamRoleLambdaExecution": {
-              "Type": "AWS::IAM::Role",
-              "Properties": {
-                "AssumeRolePolicyDocument": {
-                  "Version": "2012-10-17",
-                  "Statement": [
-                    {
-                      "Effect": "Allow",
-                      "Principal": {
-                        "Service": [
-                          "lambda.amazonaws.com"
-                        ]
-                      },
-                      "Action": [
-                        "sts:AssumeRole"
-                      ]
-                    }
-                  ]
-                },
-                "Policies": [
-                  {
-                    "PolicyName": {
-                      "Fn::Join": [
-                        "-",
-                        [
-                          "serverless-framework",
-                          "dev",
-                          "lambda"
-                        ]
-                      ]
-                    },
-                    "PolicyDocument": {
-                      "Version": "2012-10-17",
-                      "Statement": [
-                        {
-                          "Effect": "Allow",
-                          "Action": [
-                            "logs:CreateLogStream",
-                            "logs:CreateLogGroup",
-                            "logs:TagResource"
-                          ],
-                          "Resource": [
-                            {
-                              "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/serverless-framework-dev*:*"
-                            }
-                          ]
-                        },
-                        {
-                          "Effect": "Allow",
-                          "Action": [
-                            "logs:PutLogEvents"
-                          ],
-                          "Resource": [
-                            {
-                              "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/serverless-framework-dev*:*:*"
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  }
-                ],
-                "Path": "/",
-                "RoleName": {
-                  "Fn::Join": [
-                    "-",
-                    [
-                      "serverless-framework",
-                      "dev",
-                      {
-                        "Ref": "AWS::Region"
-                      },
-                      "lambdaRole"
-                    ]
-                  ]
-                }
-              }
-            },
-            "HelloLambdaFunction": {
-              "Type": "AWS::Lambda::Function",
-              "Properties": {
-                "Code": {
-                  "S3Bucket": "serverless-framework-deployments-ap-south-1-ef6a676c-48d2",
-                  "S3Key": "serverless/serverless-framework/dev/1758534649067-2025-09-22T09:50:49.067Z/serverless-framework.zip"
-                },
-                "Handler": "handler.hellio",
-                "Runtime": "nodejs18.x",
-                "FunctionName": "serverless-framework-dev-hello",
-                "MemorySize": 1024,
-                "Timeout": 6,
-                "Role": {
-                  "Fn::GetAtt": [
-                    "IamRoleLambdaExecution",
-                    "Arn"
-                  ]
-                }
-              },
-              "DependsOn": [
-                "HelloLogGroup"
-              ]
-            },
-            "HelloLambdaVersionD4iN33PdqWGTwmYxjoNqubLFvPplrhm7c4Ig9WlgY2U": {
-              "Type": "AWS::Lambda::Version",
-              "DeletionPolicy": "Retain",
-              "Properties": {
-                "FunctionName": {
-                  "Ref": "HelloLambdaFunction"
-                },
-                "CodeSha256": "s+5Ffed0VsJCfxXYWEBiB8X0ihaR/5PKodeq93VKKtc="
-              }
-            }
-          },
-          "Outputs": {
-            "ServerlessDeploymentBucketName": {
-              "Value": "serverless-framework-deployments-ap-south-1-ef6a676c-48d2",
-              "Export": {
-                "Name": "sls-serverless-framework-dev-ServerlessDeploymentBucketName"
-              }
-            },
-            "HelloLambdaFunctionQualifiedArn": {
-              "Description": "Current Lambda function version",
-              "Value": {
-                "Ref": "HelloLambdaVersionD4iN33PdqWGTwmYxjoNqubLFvPplrhm7c4Ig9WlgY2U"
-              },
-              "Export": {
-                "Name": "sls-serverless-framework-dev-HelloLambdaFunctionQualifiedArn"
-              }
-            }
-          }
-        },
-        "vpc": {}
+        "versionFunctions": true
       },
       "functions": {
-        "hello": {
-          "handler": "handler.hellio",
-          "events": [],
-          "name": "serverless-framework-dev-hello",
-          "package": {},
-          "memory": 1024,
-          "timeout": 6,
-          "runtime": "nodejs18.x",
-          "vpc": {},
-          "versionLogicalId": "HelloLambdaVersionD4iN33PdqWGTwmYxjoNqubLFvPplrhm7c4Ig9WlgY2U"
+        "service-A": {
+          "handler": "handler.serviceA",
+          "description": "this lambda function belongs to service A of my microservices app",
+          "events": [
+            {
+              "httpApi": {
+                "path": "/service-a",
+                "method": "get"
+              }
+            }
+          ],
+          "iamRoleStatements": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "lambda:InvokeFunction"
+              ],
+              "Resource": {
+                "Fn::GetAtt": [
+                  "ServiceBLambdaFunction",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:PutItem"
+              ],
+              "Resource": {
+                "Fn::GetAtt": [
+                  "ServerlessFrameworkTable",
+                  "Arn"
+                ]
+              }
+            }
+          ],
+          "name": "serverless-framework-dev-service-A"
+        },
+        "service-B": {
+          "handler": "handler.serviceB",
+          "description": "this lambda function belongs to service B of my microservices app",
+          "events": [
+            {
+              "httpApi": {
+                "path": "/service-b",
+                "method": "get"
+              }
+            }
+          ],
+          "iamRoleStatements": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:PutItem"
+              ],
+              "Resource": {
+                "Fn::GetAtt": [
+                  "ServiceBLambdaFunction",
+                  "Arn"
+                ]
+              }
+            }
+          ],
+          "name": "serverless-framework-dev-service-B"
+        }
+      },
+      "resources": {
+        "Resources": {
+          "ServerlessFrameworkTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "ServerlessFrameworkTable",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "id",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "id",
+                  "KeyType": "HASH"
+                }
+              ],
+              "BillingMode": "PAY_PER_REQUEST"
+            }
+          }
         }
       }
     },
@@ -171,149 +111,9 @@
       "name": "aws",
       "runtime": "nodejs18.x",
       "region": "ap-south-1",
+      "timeout": 10,
       "stage": "dev",
-      "versionFunctions": true,
-      "compiledCloudFormationTemplate": {
-        "AWSTemplateFormatVersion": "2010-09-09",
-        "Description": "The AWS CloudFormation template for this Serverless application",
-        "Resources": {
-          "HelloLogGroup": {
-            "Type": "AWS::Logs::LogGroup",
-            "Properties": {
-              "LogGroupName": "/aws/lambda/serverless-framework-dev-hello"
-            }
-          },
-          "IamRoleLambdaExecution": {
-            "Type": "AWS::IAM::Role",
-            "Properties": {
-              "AssumeRolePolicyDocument": {
-                "Version": "2012-10-17",
-                "Statement": [
-                  {
-                    "Effect": "Allow",
-                    "Principal": {
-                      "Service": [
-                        "lambda.amazonaws.com"
-                      ]
-                    },
-                    "Action": [
-                      "sts:AssumeRole"
-                    ]
-                  }
-                ]
-              },
-              "Policies": [
-                {
-                  "PolicyName": {
-                    "Fn::Join": [
-                      "-",
-                      [
-                        "serverless-framework",
-                        "dev",
-                        "lambda"
-                      ]
-                    ]
-                  },
-                  "PolicyDocument": {
-                    "Version": "2012-10-17",
-                    "Statement": [
-                      {
-                        "Effect": "Allow",
-                        "Action": [
-                          "logs:CreateLogStream",
-                          "logs:CreateLogGroup",
-                          "logs:TagResource"
-                        ],
-                        "Resource": [
-                          {
-                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/serverless-framework-dev*:*"
-                          }
-                        ]
-                      },
-                      {
-                        "Effect": "Allow",
-                        "Action": [
-                          "logs:PutLogEvents"
-                        ],
-                        "Resource": [
-                          {
-                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/serverless-framework-dev*:*:*"
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                }
-              ],
-              "Path": "/",
-              "RoleName": {
-                "Fn::Join": [
-                  "-",
-                  [
-                    "serverless-framework",
-                    "dev",
-                    {
-                      "Ref": "AWS::Region"
-                    },
-                    "lambdaRole"
-                  ]
-                ]
-              }
-            }
-          },
-          "HelloLambdaFunction": {
-            "Type": "AWS::Lambda::Function",
-            "Properties": {
-              "Code": {
-                "S3Bucket": "serverless-framework-deployments-ap-south-1-ef6a676c-48d2",
-                "S3Key": "serverless/serverless-framework/dev/1758534649067-2025-09-22T09:50:49.067Z/serverless-framework.zip"
-              },
-              "Handler": "handler.hellio",
-              "Runtime": "nodejs18.x",
-              "FunctionName": "serverless-framework-dev-hello",
-              "MemorySize": 1024,
-              "Timeout": 6,
-              "Role": {
-                "Fn::GetAtt": [
-                  "IamRoleLambdaExecution",
-                  "Arn"
-                ]
-              }
-            },
-            "DependsOn": [
-              "HelloLogGroup"
-            ]
-          },
-          "HelloLambdaVersionD4iN33PdqWGTwmYxjoNqubLFvPplrhm7c4Ig9WlgY2U": {
-            "Type": "AWS::Lambda::Version",
-            "DeletionPolicy": "Retain",
-            "Properties": {
-              "FunctionName": {
-                "Ref": "HelloLambdaFunction"
-              },
-              "CodeSha256": "s+5Ffed0VsJCfxXYWEBiB8X0ihaR/5PKodeq93VKKtc="
-            }
-          }
-        },
-        "Outputs": {
-          "ServerlessDeploymentBucketName": {
-            "Value": "serverless-framework-deployments-ap-south-1-ef6a676c-48d2",
-            "Export": {
-              "Name": "sls-serverless-framework-dev-ServerlessDeploymentBucketName"
-            }
-          },
-          "HelloLambdaFunctionQualifiedArn": {
-            "Description": "Current Lambda function version",
-            "Value": {
-              "Ref": "HelloLambdaVersionD4iN33PdqWGTwmYxjoNqubLFvPplrhm7c4Ig9WlgY2U"
-            },
-            "Export": {
-              "Name": "sls-serverless-framework-dev-HelloLambdaFunctionQualifiedArn"
-            }
-          }
-        }
-      },
-      "vpc": {}
+      "versionFunctions": true
     },
     "dashboard": {
       "isEnabledForService": false,
@@ -324,9 +124,9 @@
       "serviceProvider": null,
       "instanceParameters": null
     },
-    "serviceRawFile": "service: serverless-framework\n\nprovider:\n  name: aws\n  runtime: nodejs18.x\n  region: ap-south-1\n\nfunctions:\n  hello:\n    handler: handler.hellio\n",
+    "serviceRawFile": "service: serverless-framework\n\nprovider:\n  name: aws\n  runtime: nodejs18.x\n  region: ap-south-1\n  timeout: 10\n  \n\nfunctions:\n  service-A:\n    handler: handler.serviceA\n    description: this lambda function belongs to service A of my microservices app\n    events:   # This blocks create an api gateway endpoint to trigger the function\n      - httpApi:\n          path: /service-a\n          method: get\n    # provide permissions to role of lambda function of service A\n    iamRoleStatements:\n      - Effect: Allow\n        Action:   # invode lambda function of service-B\n          - lambda:InvokeFunction\n        # This is the magic! We use a CloudFormation intrinsic function to get the REAL Arn of serviceB after it's created.\n        Resource: !GetAtt ServiceBLambdaFunction.Arn    # The Logical ID for the 'serviceB' function is 'ServiceBLambdaFunction'\n      - Effect: Allow\n        Action:\n          - dynamodb:GetItem\n          - dynamodb:PutItem\n        Resource: !GetAtt ServerlessFrameworkTable.Arn   # The Logical ID for the 'serverless-framework-table' function is 'Serverlessframeworktable'\n\n  service-B:\n    handler: handler.serviceB\n    description: this lambda function belongs to service B of my microservices app\n    events:   # This blocks create an api gateway endpoint to trigger the function\n      - httpApi:\n          path: /service-b\n          method: get\n    # These permissions apply ONLY to serviceB\n    iamRoleStatements:\n      - Effect: Allow\n        Action:\n          - dynamodb:GetItem\n          - dynamodb:PutItem\n        # This gets the REAL Arn of the table we define below\n        Resource: !GetAtt ServiceBLambdaFunction.Arn\n\n\n# Creating DynamoDB Table\nresources:\n  Resources:\n    ServerlessFrameworkTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n          TableName: ServerlessFrameworkTable\n          AttributeDefinitions:   # Define Columns\n            - AttributeName: id\n              AttributeType: S\n          KeySchema:   # Define value in those columns\n            - AttributeName: id\n              KeyType: HASH\n          BillingMode: PAY_PER_REQUEST\n",
     "command": [
-      "deploy"
+      "remove"
     ],
     "options": {},
     "orgId": "ae40cdf6-83ee-43d3-b505-87ef3101740e",
@@ -351,146 +151,6 @@
         "OutputValue": "serverless-framework-deployments-ap-south-1-ef6a676c-48d2",
         "ExportName": "sls-serverless-framework-dev-ServerlessDeploymentBucketName"
       }
-    ],
-    "compiledCloudFormationTemplate": {
-      "AWSTemplateFormatVersion": "2010-09-09",
-      "Description": "The AWS CloudFormation template for this Serverless application",
-      "Resources": {
-        "HelloLogGroup": {
-          "Type": "AWS::Logs::LogGroup",
-          "Properties": {
-            "LogGroupName": "/aws/lambda/serverless-framework-dev-hello"
-          }
-        },
-        "IamRoleLambdaExecution": {
-          "Type": "AWS::IAM::Role",
-          "Properties": {
-            "AssumeRolePolicyDocument": {
-              "Version": "2012-10-17",
-              "Statement": [
-                {
-                  "Effect": "Allow",
-                  "Principal": {
-                    "Service": [
-                      "lambda.amazonaws.com"
-                    ]
-                  },
-                  "Action": [
-                    "sts:AssumeRole"
-                  ]
-                }
-              ]
-            },
-            "Policies": [
-              {
-                "PolicyName": {
-                  "Fn::Join": [
-                    "-",
-                    [
-                      "serverless-framework",
-                      "dev",
-                      "lambda"
-                    ]
-                  ]
-                },
-                "PolicyDocument": {
-                  "Version": "2012-10-17",
-                  "Statement": [
-                    {
-                      "Effect": "Allow",
-                      "Action": [
-                        "logs:CreateLogStream",
-                        "logs:CreateLogGroup",
-                        "logs:TagResource"
-                      ],
-                      "Resource": [
-                        {
-                          "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/serverless-framework-dev*:*"
-                        }
-                      ]
-                    },
-                    {
-                      "Effect": "Allow",
-                      "Action": [
-                        "logs:PutLogEvents"
-                      ],
-                      "Resource": [
-                        {
-                          "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/serverless-framework-dev*:*:*"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              }
-            ],
-            "Path": "/",
-            "RoleName": {
-              "Fn::Join": [
-                "-",
-                [
-                  "serverless-framework",
-                  "dev",
-                  {
-                    "Ref": "AWS::Region"
-                  },
-                  "lambdaRole"
-                ]
-              ]
-            }
-          }
-        },
-        "HelloLambdaFunction": {
-          "Type": "AWS::Lambda::Function",
-          "Properties": {
-            "Code": {
-              "S3Bucket": "serverless-framework-deployments-ap-south-1-ef6a676c-48d2",
-              "S3Key": "serverless/serverless-framework/dev/1758534649067-2025-09-22T09:50:49.067Z/serverless-framework.zip"
-            },
-            "Handler": "handler.hellio",
-            "Runtime": "nodejs18.x",
-            "FunctionName": "serverless-framework-dev-hello",
-            "MemorySize": 1024,
-            "Timeout": 6,
-            "Role": {
-              "Fn::GetAtt": [
-                "IamRoleLambdaExecution",
-                "Arn"
-              ]
-            }
-          },
-          "DependsOn": [
-            "HelloLogGroup"
-          ]
-        },
-        "HelloLambdaVersionD4iN33PdqWGTwmYxjoNqubLFvPplrhm7c4Ig9WlgY2U": {
-          "Type": "AWS::Lambda::Version",
-          "DeletionPolicy": "Retain",
-          "Properties": {
-            "FunctionName": {
-              "Ref": "HelloLambdaFunction"
-            },
-            "CodeSha256": "s+5Ffed0VsJCfxXYWEBiB8X0ihaR/5PKodeq93VKKtc="
-          }
-        }
-      },
-      "Outputs": {
-        "ServerlessDeploymentBucketName": {
-          "Value": "serverless-framework-deployments-ap-south-1-ef6a676c-48d2",
-          "Export": {
-            "Name": "sls-serverless-framework-dev-ServerlessDeploymentBucketName"
-          }
-        },
-        "HelloLambdaFunctionQualifiedArn": {
-          "Description": "Current Lambda function version",
-          "Value": {
-            "Ref": "HelloLambdaVersionD4iN33PdqWGTwmYxjoNqubLFvPplrhm7c4Ig9WlgY2U"
-          },
-          "Export": {
-            "Name": "sls-serverless-framework-dev-HelloLambdaFunctionQualifiedArn"
-          }
-        }
-      }
-    }
+    ]
   }
 }
