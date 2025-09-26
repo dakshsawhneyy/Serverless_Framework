@@ -21,7 +21,7 @@ module.exports.serviceA = async(event) => {
         const command = new InvokeCommand(params);
 
         // Makes a netwrk call to AWS to trigger service_b lambda function
-        const response = await lambdaClient.send(params)
+        const response = await lambdaClient.send(command)
 
         // The payload is a Uint8Array, so we need to decode it -- this is response we got while calling Service B
         const responsePayload = new TextDecoder().decode(response.Payload);
