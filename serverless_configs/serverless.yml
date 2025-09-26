@@ -5,7 +5,11 @@ provider:
   runtime: nodejs18.x
   region: ap-south-1
   timeout: 10
-  
+
+  # providing env variables for handler.js
+  environment:
+    SERVICE_B_NAME: ${self:service}-${sls:stage}-service-B     # (serverless-framework)-(dev)-(service-B)
+    DYNAMODB_TABLE: ServerlessFrameworkTable
 
 functions:
   service-A:
