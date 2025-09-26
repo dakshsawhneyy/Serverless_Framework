@@ -8,16 +8,27 @@
       "name": "aws",
       "runtime": "nodejs18.x",
       "region": "ap-south-1",
+      "timeout": 10,
+      "environment": {
+        "SERVICE_B_NAME": "serverless-framework-dev-service-B",
+        "DYNAMODB_TABLE": "ServerlessFrameworkTable"
+      },
       "stage": "dev",
       "versionFunctions": true,
       "compiledCloudFormationTemplate": {
         "AWSTemplateFormatVersion": "2010-09-09",
         "Description": "The AWS CloudFormation template for this Serverless application",
         "Resources": {
-          "HelloLogGroup": {
+          "ServiceDashALogGroup": {
             "Type": "AWS::Logs::LogGroup",
             "Properties": {
-              "LogGroupName": "/aws/lambda/serverless-framework-dev-hello"
+              "LogGroupName": "/aws/lambda/serverless-framework-dev-service-A"
+            }
+          },
+          "ServiceDashBLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/serverless-framework-dev-service-B"
             }
           },
           "IamRoleLambdaExecution": {
@@ -98,37 +109,447 @@
               }
             }
           },
-          "HelloLambdaFunction": {
+          "ServiceDashALambdaFunction": {
             "Type": "AWS::Lambda::Function",
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-ap-south-1-ef6a676c-48d2",
-                "S3Key": "serverless/serverless-framework/dev/1758534649067-2025-09-22T09:50:49.067Z/serverless-framework.zip"
+                "S3Key": "serverless/serverless-framework/dev/1758864697202-2025-09-26T05:31:37.202Z/serverless-framework.zip"
               },
-              "Handler": "handler.hellio",
+              "Handler": "handler.serviceA",
               "Runtime": "nodejs18.x",
-              "FunctionName": "serverless-framework-dev-hello",
+              "FunctionName": "serverless-framework-dev-service-A",
               "MemorySize": 1024,
-              "Timeout": 6,
+              "Timeout": 10,
+              "Description": "this lambda function belongs to service A of my microservices app",
+              "Environment": {
+                "Variables": {
+                  "SERVICE_B_NAME": "serverless-framework-dev-service-B",
+                  "DYNAMODB_TABLE": "ServerlessFrameworkTable"
+                }
+              },
               "Role": {
                 "Fn::GetAtt": [
-                  "IamRoleLambdaExecution",
+                  "ServiceDashAIamRoleLambdaExecution",
                   "Arn"
                 ]
               }
             },
             "DependsOn": [
-              "HelloLogGroup"
+              "ServiceDashAIamRoleLambdaExecution",
+              "ServiceDashALogGroup"
             ]
           },
-          "HelloLambdaVersionD4iN33PdqWGTwmYxjoNqubLFvPplrhm7c4Ig9WlgY2U": {
+          "ServiceDashBLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-ap-south-1-ef6a676c-48d2",
+                "S3Key": "serverless/serverless-framework/dev/1758864697202-2025-09-26T05:31:37.202Z/serverless-framework.zip"
+              },
+              "Handler": "handler.serviceB",
+              "Runtime": "nodejs18.x",
+              "FunctionName": "serverless-framework-dev-service-B",
+              "MemorySize": 1024,
+              "Timeout": 10,
+              "Description": "this lambda function belongs to service B of my microservices app",
+              "Environment": {
+                "Variables": {
+                  "SERVICE_B_NAME": "serverless-framework-dev-service-B",
+                  "DYNAMODB_TABLE": "ServerlessFrameworkTable"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "ServiceDashBIamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "ServiceDashBIamRoleLambdaExecution",
+              "ServiceDashBLogGroup"
+            ]
+          },
+          "ServiceDashALambdaVersionnjF37rpNlQtJlxlRo3RtmMZK3infe8lzurEa0hOhSQ8": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
-                "Ref": "HelloLambdaFunction"
+                "Ref": "ServiceDashALambdaFunction"
               },
-              "CodeSha256": "s+5Ffed0VsJCfxXYWEBiB8X0ihaR/5PKodeq93VKKtc="
+              "CodeSha256": "/Bm3nk6x7RD6P78LTs6oy+go1MoeT+xt8z2SCBT4r9w=",
+              "Description": "this lambda function belongs to service A of my microservices app"
+            }
+          },
+          "ServiceDashBLambdaVersionA1duvW241KcXHhah21UywdtoUXjItmETFzMRc8onXc": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "ServiceDashBLambdaFunction"
+              },
+              "CodeSha256": "/Bm3nk6x7RD6P78LTs6oy+go1MoeT+xt8z2SCBT4r9w=",
+              "Description": "this lambda function belongs to service B of my microservices app"
+            }
+          },
+          "HttpApi": {
+            "Type": "AWS::ApiGatewayV2::Api",
+            "Properties": {
+              "Name": "dev-serverless-framework",
+              "ProtocolType": "HTTP"
+            }
+          },
+          "HttpApiStage": {
+            "Type": "AWS::ApiGatewayV2::Stage",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "StageName": "$default",
+              "AutoDeploy": true,
+              "DefaultRouteSettings": {
+                "DetailedMetricsEnabled": false
+              }
+            }
+          },
+          "ServiceDashALambdaPermissionHttpApi": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "ServiceDashALambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "HttpApiIntegrationServiceDashA": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"ServiceDashALambdaPermissionHttpApi\"][\"Properties\"][\"FunctionName\"]"
+              },
+              "PayloadFormatVersion": "2.0",
+              "TimeoutInMillis": 30000
+            }
+          },
+          "HttpApiRouteGetServiceDasha": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "GET /service-a",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationServiceDashA"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationServiceDashA"
+          },
+          "ServiceDashBLambdaPermissionHttpApi": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "ServiceDashBLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "HttpApiIntegrationServiceDashB": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"ServiceDashBLambdaPermissionHttpApi\"][\"Properties\"][\"FunctionName\"]"
+              },
+              "PayloadFormatVersion": "2.0",
+              "TimeoutInMillis": 30000
+            }
+          },
+          "HttpApiRouteGetServiceDashb": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "GET /service-b",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationServiceDashB"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationServiceDashB"
+          },
+          "ServiceDashAIamRoleLambdaExecution": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+              "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": [
+                        "lambda.amazonaws.com"
+                      ]
+                    },
+                    "Action": [
+                      "sts:AssumeRole"
+                    ]
+                  }
+                ]
+              },
+              "Policies": [
+                {
+                  "PolicyName": {
+                    "Fn::Join": [
+                      "-",
+                      [
+                        "serverless-framework",
+                        "dev",
+                        "lambda"
+                      ]
+                    ]
+                  },
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:CreateLogStream",
+                          "logs:CreateLogGroup",
+                          "logs:PutLogEvents"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/serverless-framework-dev-service-A:*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "lambda:InvokeFunction"
+                        ],
+                        "Resource": {
+                          "Fn::GetAtt": [
+                            "ServiceDashBLambdaFunction",
+                            "Arn"
+                          ]
+                        }
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "dynamodb:GetItem",
+                          "dynamodb:PutItem"
+                        ],
+                        "Resource": {
+                          "Fn::GetAtt": [
+                            "ServerlessFrameworkTable",
+                            "Arn"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Path": "/",
+              "RoleName": {
+                "Fn::Join": [
+                  "-",
+                  [
+                    "serverless-framework",
+                    "dev",
+                    "service-A",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    "lambdaRole"
+                  ]
+                ]
+              },
+              "ManagedPolicyArns": []
+            }
+          },
+          "ServiceDashBIamRoleLambdaExecution": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+              "AssumeRolePolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Principal": {
+                      "Service": [
+                        "lambda.amazonaws.com"
+                      ]
+                    },
+                    "Action": [
+                      "sts:AssumeRole"
+                    ]
+                  }
+                ]
+              },
+              "Policies": [
+                {
+                  "PolicyName": {
+                    "Fn::Join": [
+                      "-",
+                      [
+                        "serverless-framework",
+                        "dev",
+                        "lambda"
+                      ]
+                    ]
+                  },
+                  "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "logs:CreateLogStream",
+                          "logs:CreateLogGroup",
+                          "logs:PutLogEvents"
+                        ],
+                        "Resource": [
+                          {
+                            "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/serverless-framework-dev-service-B:*:*"
+                          }
+                        ]
+                      },
+                      {
+                        "Effect": "Allow",
+                        "Action": [
+                          "dynamodb:GetItem",
+                          "dynamodb:PutItem"
+                        ],
+                        "Resource": {
+                          "Fn::GetAtt": [
+                            "ServerlessFrameworkTable",
+                            "Arn"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ],
+              "Path": "/",
+              "RoleName": {
+                "Fn::Join": [
+                  "-",
+                  [
+                    "serverless-framework",
+                    "dev",
+                    "service-B",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    "lambdaRole"
+                  ]
+                ]
+              },
+              "ManagedPolicyArns": []
+            }
+          },
+          "ServerlessFrameworkTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "ServerlessFrameworkTable",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "id",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "id",
+                  "KeyType": "HASH"
+                }
+              ],
+              "BillingMode": "PAY_PER_REQUEST"
             }
           }
         },
@@ -139,13 +560,56 @@
               "Name": "sls-serverless-framework-dev-ServerlessDeploymentBucketName"
             }
           },
-          "HelloLambdaFunctionQualifiedArn": {
+          "ServiceDashALambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "HelloLambdaVersionD4iN33PdqWGTwmYxjoNqubLFvPplrhm7c4Ig9WlgY2U"
+              "Ref": "ServiceDashALambdaVersionnjF37rpNlQtJlxlRo3RtmMZK3infe8lzurEa0hOhSQ8"
             },
             "Export": {
-              "Name": "sls-serverless-framework-dev-HelloLambdaFunctionQualifiedArn"
+              "Name": "sls-serverless-framework-dev-ServiceDashALambdaFunctionQualifiedArn"
+            }
+          },
+          "ServiceDashBLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "ServiceDashBLambdaVersionA1duvW241KcXHhah21UywdtoUXjItmETFzMRc8onXc"
+            },
+            "Export": {
+              "Name": "sls-serverless-framework-dev-ServiceDashBLambdaFunctionQualifiedArn"
+            }
+          },
+          "HttpApiId": {
+            "Description": "Id of the HTTP API",
+            "Value": {
+              "Ref": "HttpApi"
+            },
+            "Export": {
+              "Name": "sls-serverless-framework-dev-HttpApiId"
+            }
+          },
+          "HttpApiUrl": {
+            "Description": "URL of the HTTP API",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://",
+                  {
+                    "Ref": "HttpApi"
+                  },
+                  ".execute-api.",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ".",
+                  {
+                    "Ref": "AWS::URLSuffix"
+                  }
+                ]
+              ]
+            },
+            "Export": {
+              "Name": "sls-serverless-framework-dev-HttpApiUrl"
             }
           }
         }
@@ -154,17 +618,85 @@
     },
     "pluginsData": {},
     "functions": {
-      "hello": {
-        "handler": "handler.hellio",
-        "events": [],
-        "name": "serverless-framework-dev-hello",
+      "service-A": {
+        "handler": "handler.serviceA",
+        "description": "this lambda function belongs to service A of my microservices app",
+        "events": [
+          {
+            "httpApi": {
+              "path": "/service-a",
+              "method": "get"
+            },
+            "resolvedMethod": "GET",
+            "resolvedPath": "/service-a"
+          }
+        ],
+        "iamRoleStatements": [
+          {
+            "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"ServiceDashAIamRoleLambdaExecution\"][\"Properties\"][\"Policies\"][0][\"PolicyDocument\"][\"Statement\"][1]"
+          },
+          {
+            "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"ServiceDashAIamRoleLambdaExecution\"][\"Properties\"][\"Policies\"][0][\"PolicyDocument\"][\"Statement\"][2]"
+          }
+        ],
+        "name": "serverless-framework-dev-service-A",
         "package": {},
         "memory": 1024,
-        "timeout": 6,
+        "timeout": 10,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "HelloLambdaVersionD4iN33PdqWGTwmYxjoNqubLFvPplrhm7c4Ig9WlgY2U"
+        "versionLogicalId": "ServiceDashALambdaVersionnjF37rpNlQtJlxlRo3RtmMZK3infe8lzurEa0hOhSQ8"
+      },
+      "service-B": {
+        "handler": "handler.serviceB",
+        "description": "this lambda function belongs to service B of my microservices app",
+        "events": [
+          {
+            "httpApi": {
+              "path": "/service-b",
+              "method": "get"
+            },
+            "resolvedMethod": "GET",
+            "resolvedPath": "/service-b"
+          }
+        ],
+        "iamRoleStatements": [
+          {
+            "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"ServiceDashBIamRoleLambdaExecution\"][\"Properties\"][\"Policies\"][0][\"PolicyDocument\"][\"Statement\"][1]"
+          }
+        ],
+        "name": "serverless-framework-dev-service-B",
+        "package": {},
+        "memory": 1024,
+        "timeout": 10,
+        "runtime": "nodejs18.x",
+        "vpc": {},
+        "versionLogicalId": "ServiceDashBLambdaVersionA1duvW241KcXHhah21UywdtoUXjItmETFzMRc8onXc"
       }
+    },
+    "resources": {
+      "Resources": {
+        "ServerlessFrameworkTable": {
+          "Type": "AWS::DynamoDB::Table",
+          "Properties": {
+            "TableName": "ServerlessFrameworkTable",
+            "AttributeDefinitions": [
+              {
+                "AttributeName": "id",
+                "AttributeType": "S"
+              }
+            ],
+            "KeySchema": [
+              {
+                "AttributeName": "id",
+                "KeyType": "HASH"
+              }
+            ],
+            "BillingMode": "PAY_PER_REQUEST"
+          }
+        }
+      },
+      "Outputs": {}
     },
     "configValidationMode": "warn",
     "serviceFilename": "serverless",
@@ -175,6 +707,9 @@
       },
       "functions": {
         "$ref": "$[\"service\"][\"functions\"]"
+      },
+      "resources": {
+        "$ref": "$[\"service\"][\"resources\"]"
       }
     },
     "appId": null,
@@ -183,7 +718,7 @@
     "artifact": "/home/ubuntu/serverless_framework/serverless_configs/.serverless/serverless-framework.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/serverless-framework/dev/1758534649067-2025-09-22T09:50:49.067Z",
+    "artifactDirectoryName": "serverless/serverless-framework/dev/1758864697202-2025-09-26T05:31:37.202Z",
     "artifact": "serverless-framework.zip"
   }
 }

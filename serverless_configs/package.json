@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.896.0",
+    "uuid": "^13.0.0"
+  }
+}
