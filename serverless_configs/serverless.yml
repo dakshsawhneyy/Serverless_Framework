@@ -4,6 +4,9 @@ provider:
   name: aws
   runtime: nodejs18.x
   region: ap-south-1
+  tracing:    # Enabling AWS X-Ray
+    lambda: true
+    apiGateway: true
   timeout: 10
 
   # providing env variables for handler.js

@@ -71,6 +71,16 @@
                       "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/serverless-framework-dev*:*:*"
                     }
                   ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "xray:PutTraceSegments",
+                    "xray:PutTelemetryRecords"
+                  ],
+                  "Resource": [
+                    "*"
+                  ]
                 }
               ]
             }
@@ -97,7 +107,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-ap-south-1-ef6a676c-48d2",
-          "S3Key": "serverless/serverless-framework/dev/1758866743119-2025-09-26T06:05:43.119Z/serverless-framework.zip"
+          "S3Key": "serverless/serverless-framework/dev/1758876561362-2025-09-26T08:49:21.362Z/serverless-framework.zip"
         },
         "Handler": "handler.serviceA",
         "Runtime": "nodejs18.x",
@@ -105,6 +115,9 @@
         "MemorySize": 1024,
         "Timeout": 10,
         "Description": "this lambda function belongs to service A of my microservices app",
+        "TracingConfig": {
+          "Mode": "Active"
+        },
         "Environment": {
           "Variables": {
             "SERVICE_B_NAME": "serverless-framework-dev-service-B",
@@ -128,7 +141,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-ap-south-1-ef6a676c-48d2",
-          "S3Key": "serverless/serverless-framework/dev/1758866743119-2025-09-26T06:05:43.119Z/serverless-framework.zip"
+          "S3Key": "serverless/serverless-framework/dev/1758876561362-2025-09-26T08:49:21.362Z/serverless-framework.zip"
         },
         "Handler": "handler.serviceB",
         "Runtime": "nodejs18.x",
@@ -136,6 +149,9 @@
         "MemorySize": 1024,
         "Timeout": 10,
         "Description": "this lambda function belongs to service B of my microservices app",
+        "TracingConfig": {
+          "Mode": "Active"
+        },
         "Environment": {
           "Variables": {
             "SERVICE_B_NAME": "serverless-framework-dev-service-B",
@@ -154,25 +170,25 @@
         "ServiceDashBLogGroup"
       ]
     },
-    "ServiceDashALambdaVersionBzo2nJ1SiAIEEW16YsrCbj8kMKTprmEOBlTNoAEj42I": {
+    "ServiceDashALambdaVersionjv9FnKsOelYgTSAr7X8wzNVkJKfunqFNsD6H9bITsy8": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "ServiceDashALambdaFunction"
         },
-        "CodeSha256": "dg+2Du6QS8C3e9rflMe3ZL8VE/sp79jLZIgoM8muHo0=",
+        "CodeSha256": "wPhlJHnvdmuPmJ3gjqadjVqTlqvKdCU402zdGSH/aW8=",
         "Description": "this lambda function belongs to service A of my microservices app"
       }
     },
-    "ServiceDashBLambdaVersionOD7LSjFgz0Am9cBRLzvG3LqlzrK668XxlF80QmnBpO0": {
+    "ServiceDashBLambdaVersionRkObZDYUk64PjpRU3gH2dE02LsaxsMsvs1hL36DCzQ": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "ServiceDashBLambdaFunction"
         },
-        "CodeSha256": "dg+2Du6QS8C3e9rflMe3ZL8VE/sp79jLZIgoM8muHo0=",
+        "CodeSha256": "wPhlJHnvdmuPmJ3gjqadjVqTlqvKdCU402zdGSH/aW8=",
         "Description": "this lambda function belongs to service B of my microservices app"
       }
     },
@@ -552,7 +568,7 @@
     "ServiceDashALambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "ServiceDashALambdaVersionBzo2nJ1SiAIEEW16YsrCbj8kMKTprmEOBlTNoAEj42I"
+        "Ref": "ServiceDashALambdaVersionjv9FnKsOelYgTSAr7X8wzNVkJKfunqFNsD6H9bITsy8"
       },
       "Export": {
         "Name": "sls-serverless-framework-dev-ServiceDashALambdaFunctionQualifiedArn"
@@ -561,7 +577,7 @@
     "ServiceDashBLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "ServiceDashBLambdaVersionOD7LSjFgz0Am9cBRLzvG3LqlzrK668XxlF80QmnBpO0"
+        "Ref": "ServiceDashBLambdaVersionRkObZDYUk64PjpRU3gH2dE02LsaxsMsvs1hL36DCzQ"
       },
       "Export": {
         "Name": "sls-serverless-framework-dev-ServiceDashBLambdaFunctionQualifiedArn"
