@@ -26,7 +26,7 @@ module.exports.serviceA = async(event) => {
         // The payload is a Uint8Array, so we need to decode it -- this is response we got while calling Service B
         const responsePayload = new TextDecoder().decode(response.Payload);
 
-        return { statusCode: 200, body: JSON.stringify({ message: 'Service A successfully called Service B', responseFromB: JSON.parse(responsePayload) }) }
+        return { statusCode: 200, body: JSON.stringify({ message: 'Service A --- version 3  --- successfully called Service B', responseFromB: JSON.parse(responsePayload) }) }
     } catch (error) {
         console.log(error.message);
         return { statusCode: 500, body: JSON.stringify({ message: 'Error calling Service B', error: error.message }) }

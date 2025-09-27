@@ -1,5 +1,9 @@
 service: serverless-framework
 
+# Telling to use this plugin for canary deployment
+plugins:
+  - serverless-plugin-canary-deployments
+
 provider:
   name: aws
   runtime: nodejs18.x
@@ -19,9 +23,23 @@ functions:
     handler: handler.serviceA
     description: this lambda function belongs to service A of my microservices app
     events:   # This blocks create an api gateway endpoint to trigger the function
-      - httpApi:
+      - http:
           path: /service-a
           method: get
+    # Deploying using Canary Deployment
+    deploymentSettings:
+      type: Canary10Percent10Minutes   # Shift 10% of traffic, then 100% after 10 minutes
+      alias: live   # Create a stable 'live' alias for this function
+      # This section defines alarms that will trigger an automatic rollback if they go off
+      alarms:
+        - name: serviceA-canary-error-alarms
+          # This alarm watches the error rate of our function
+          metric: Errors
+          threshold: 1 # If there is 1 or more errors...
+          period: 60 # ...in any 60-second period...
+          evaluationPeriods: 1 # ...during the canary...
+          comparisonOperator: GreaterThanOrEqualToThreshold
+          # ...then automatically roll back the deployment.
     # provide permissions to role of lambda function of service A
     iamRoleStatements:
       - Effect: Allow
@@ -34,6 +52,7 @@ functions:
           - dynamodb:GetItem
           - dynamodb:PutItem
         Resource: !GetAtt ServerlessFrameworkTable.Arn   # The Logical ID for the 'serverless-framework-table' function is 'Serverlessframeworktable'
+
 
   service-B:
     handler: handler.serviceB
