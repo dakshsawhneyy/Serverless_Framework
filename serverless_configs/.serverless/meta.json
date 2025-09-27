@@ -5,10 +5,17 @@
     "serviceConfigFileName": "serverless.yml",
     "service": {
       "service": "serverless-framework",
+      "plugins": [
+        "serverless-plugin-canary-deployments"
+      ],
       "provider": {
         "name": "aws",
         "runtime": "nodejs18.x",
         "region": "ap-south-1",
+        "tracing": {
+          "lambda": true,
+          "apiGateway": true
+        },
         "timeout": 10,
         "environment": {
           "SERVICE_B_NAME": "serverless-framework-dev-service-B",
@@ -23,12 +30,26 @@
           "description": "this lambda function belongs to service A of my microservices app",
           "events": [
             {
-              "httpApi": {
+              "http": {
                 "path": "/service-a",
                 "method": "get"
               }
             }
           ],
+          "deploymentSettings": {
+            "type": "Canary10Percent10Minutes",
+            "alias": "live",
+            "alarms": [
+              {
+                "name": "serviceA-canary-error-alarms",
+                "metric": "Errors",
+                "threshold": 1,
+                "period": 60,
+                "evaluationPeriods": 1,
+                "comparisonOperator": "GreaterThanOrEqualToThreshold"
+              }
+            ]
+          },
           "iamRoleStatements": [
             {
               "Effect": "Allow",
@@ -115,6 +136,10 @@
       "name": "aws",
       "runtime": "nodejs18.x",
       "region": "ap-south-1",
+      "tracing": {
+        "lambda": true,
+        "apiGateway": true
+      },
       "timeout": 10,
       "environment": {
         "SERVICE_B_NAME": "serverless-framework-dev-service-B",
@@ -132,7 +157,7 @@
       "serviceProvider": null,
       "instanceParameters": null
     },
-    "serviceRawFile": "service: serverless-framework\n\nprovider:\n  name: aws\n  runtime: nodejs18.x\n  region: ap-south-1\n  timeout: 10\n\n  # providing env variables for handler.js\n  environment:\n    SERVICE_B_NAME: ${self:service}-${sls:stage}-service-B     # (serverless-framework)-(dev)-(service-B)\n    DYNAMODB_TABLE: ServerlessFrameworkTable\n\nfunctions:\n  service-A:\n    handler: handler.serviceA\n    description: this lambda function belongs to service A of my microservices app\n    events:   # This blocks create an api gateway endpoint to trigger the function\n      - httpApi:\n          path: /service-a\n          method: get\n    # provide permissions to role of lambda function of service A\n    iamRoleStatements:\n      - Effect: Allow\n        Action:   # invode lambda function of service-B\n          - lambda:InvokeFunction\n        # This is the magic! We use a CloudFormation intrinsic function to get the REAL Arn of serviceB after it's created.\n        Resource: !GetAtt ServiceDashBLambdaFunction.Arn    # The Logical ID for the 'service-B' function is 'ServiceDashBLambdaFunction'\n      - Effect: Allow\n        Action:\n          - dynamodb:GetItem\n          - dynamodb:PutItem\n        Resource: !GetAtt ServerlessFrameworkTable.Arn   # The Logical ID for the 'serverless-framework-table' function is 'Serverlessframeworktable'\n\n  service-B:\n    handler: handler.serviceB\n    description: this lambda function belongs to service B of my microservices app\n    events:   # This blocks create an api gateway endpoint to trigger the function\n      - httpApi:\n          path: /service-b\n          method: get\n    # These permissions apply ONLY to serviceB\n    iamRoleStatements:\n      - Effect: Allow\n        Action:\n          - dynamodb:GetItem\n          - dynamodb:PutItem\n        # This gets the REAL Arn of the table we define below\n        Resource: !GetAtt ServerlessFrameworkTable.Arn\n\n\n# Creating DynamoDB Table\nresources:\n  Resources:\n    ServerlessFrameworkTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n          TableName: ServerlessFrameworkTable\n          AttributeDefinitions:   # Define Columns\n            - AttributeName: id\n              AttributeType: S\n          KeySchema:   # Define value in those columns\n            - AttributeName: id\n              KeyType: HASH\n          BillingMode: PAY_PER_REQUEST\n",
+    "serviceRawFile": "service: serverless-framework\n\n# Telling to use this plugin for canary deployment\nplugins:\n  - serverless-plugin-canary-deployments\n\nprovider:\n  name: aws\n  runtime: nodejs18.x\n  region: ap-south-1\n  tracing:    # Enabling AWS X-Ray\n    lambda: true\n    apiGateway: true\n  timeout: 10\n\n  # providing env variables for handler.js\n  environment:\n    SERVICE_B_NAME: ${self:service}-${sls:stage}-service-B     # (serverless-framework)-(dev)-(service-B)\n    DYNAMODB_TABLE: ServerlessFrameworkTable\n\nfunctions:\n  service-A:\n    handler: handler.serviceA\n    description: this lambda function belongs to service A of my microservices app\n    events:   # This blocks create an api gateway endpoint to trigger the function\n      - http:\n          path: /service-a\n          method: get\n    # Deploying using Canary Deployment\n    deploymentSettings:\n      type: Canary10Percent10Minutes   # Shift 10% of traffic, then 100% after 10 minutes\n      alias: live   # Create a stable 'live' alias for this function\n      # This section defines alarms that will trigger an automatic rollback if they go off\n      alarms:\n        - name: serviceA-canary-error-alarms\n          # This alarm watches the error rate of our function\n          metric: Errors\n          threshold: 1 # If there is 1 or more errors...\n          period: 60 # ...in any 60-second period...\n          evaluationPeriods: 1 # ...during the canary...\n          comparisonOperator: GreaterThanOrEqualToThreshold\n          # ...then automatically roll back the deployment.\n    # provide permissions to role of lambda function of service A\n    iamRoleStatements:\n      - Effect: Allow\n        Action:   # invode lambda function of service-B\n          - lambda:InvokeFunction\n        # This is the magic! We use a CloudFormation intrinsic function to get the REAL Arn of serviceB after it's created.\n        Resource: !GetAtt ServiceDashBLambdaFunction.Arn    # The Logical ID for the 'service-B' function is 'ServiceDashBLambdaFunction'\n      - Effect: Allow\n        Action:\n          - dynamodb:GetItem\n          - dynamodb:PutItem\n        Resource: !GetAtt ServerlessFrameworkTable.Arn   # The Logical ID for the 'serverless-framework-table' function is 'Serverlessframeworktable'\n\n\n  service-B:\n    handler: handler.serviceB\n    description: this lambda function belongs to service B of my microservices app\n    events:   # This blocks create an api gateway endpoint to trigger the function\n      - httpApi:\n          path: /service-b\n          method: get\n    # These permissions apply ONLY to serviceB\n    iamRoleStatements:\n      - Effect: Allow\n        Action:\n          - dynamodb:GetItem\n          - dynamodb:PutItem\n        # This gets the REAL Arn of the table we define below\n        Resource: !GetAtt ServerlessFrameworkTable.Arn\n\n\n# Creating DynamoDB Table\nresources:\n  Resources:\n    ServerlessFrameworkTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n          TableName: ServerlessFrameworkTable\n          AttributeDefinitions:   # Define Columns\n            - AttributeName: id\n              AttributeType: S\n          KeySchema:   # Define value in those columns\n            - AttributeName: id\n              KeyType: HASH\n          BillingMode: PAY_PER_REQUEST\n",
     "command": [
       "remove"
     ],
@@ -142,28 +167,35 @@
     "userId": "2rDp26ZKhHN7BBrCPJ",
     "userName": "darkstar",
     "serviceProviderAwsAccountId": "897722695334",
-    "serviceProviderAwsCfStackId": "arn:aws:cloudformation:ap-south-1:897722695334:stack/serverless-framework-dev/d69f4dc0-9a9e-11f0-a023-0a88a87ee907",
-    "serviceProviderAwsCfStackCreated": "2025-09-26T06:05:44.568Z",
-    "serviceProviderAwsCfStackUpdated": null,
-    "serviceProviderAwsCfStackStatus": "CREATE_COMPLETE",
+    "serviceProviderAwsCfStackName": "serverless-framework-dev",
+    "serviceProviderAwsCfStackId": "arn:aws:cloudformation:ap-south-1:897722695334:stack/serverless-framework-dev/e29a7930-9b87-11f0-9564-0aab9fe8be37",
+    "serviceProviderAwsCfStackCreated": "2025-09-27T09:53:57.425Z",
+    "serviceProviderAwsCfStackUpdated": "2025-09-27T09:56:17.224Z",
+    "serviceProviderAwsCfStackStatus": "UPDATE_COMPLETE",
     "serviceProviderAwsCfStackOutputs": [
       {
         "OutputKey": "ServiceDashALambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:ap-south-1:897722695334:function:serverless-framework-dev-service-A:4",
+        "OutputValue": "arn:aws:lambda:ap-south-1:897722695334:function:serverless-framework-dev-service-A:17",
         "Description": "Current Lambda function version",
         "ExportName": "sls-serverless-framework-dev-ServiceDashALambdaFunctionQualifiedArn"
       },
       {
         "OutputKey": "ServiceDashBLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:ap-south-1:897722695334:function:serverless-framework-dev-service-B:4",
+        "OutputValue": "arn:aws:lambda:ap-south-1:897722695334:function:serverless-framework-dev-service-B:17",
         "Description": "Current Lambda function version",
         "ExportName": "sls-serverless-framework-dev-ServiceDashBLambdaFunctionQualifiedArn"
       },
       {
         "OutputKey": "HttpApiId",
-        "OutputValue": "v4ze1qxtx5",
+        "OutputValue": "r0pcxj0jq7",
         "Description": "Id of the HTTP API",
         "ExportName": "sls-serverless-framework-dev-HttpApiId"
+      },
+      {
+        "OutputKey": "ServiceEndpoint",
+        "OutputValue": "https://v9ukg815kf.execute-api.ap-south-1.amazonaws.com/dev",
+        "Description": "URL of the service endpoint",
+        "ExportName": "sls-serverless-framework-dev-ServiceEndpoint"
       },
       {
         "OutputKey": "ServerlessDeploymentBucketName",
@@ -172,7 +204,7 @@
       },
       {
         "OutputKey": "HttpApiUrl",
-        "OutputValue": "https://v4ze1qxtx5.execute-api.ap-south-1.amazonaws.com",
+        "OutputValue": "https://r0pcxj0jq7.execute-api.ap-south-1.amazonaws.com",
         "Description": "URL of the HTTP API",
         "ExportName": "sls-serverless-framework-dev-HttpApiUrl"
       }
