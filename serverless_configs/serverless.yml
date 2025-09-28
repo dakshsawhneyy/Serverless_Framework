@@ -57,6 +57,14 @@ functions:
   service-B:
     handler: handler.serviceB
     description: this lambda function belongs to service B of my microservices app
+    
+    # Add the FIS agent's "equipment" via a Lambda Layer
+    # layers:
+    #   - arn:aws:lambda:ap-south-1:152192661133:layer:AWS-FIS-Fault-Injection-Layer:4
+    # Tell the agent where to find its "mission briefing"
+    # environment:
+    #   AWS_FIS_CONFIGURATION_LOCATION: /tmp/fis-agent-config.json
+    
     events:   # This blocks create an api gateway endpoint to trigger the function
       - httpApi:
           path: /service-b
